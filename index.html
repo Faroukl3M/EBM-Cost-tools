@@ -1172,18 +1172,48 @@ async function fetchRate() {
   const display = document.getElementById('rate-display');
   display.className = 'rate-badge loading pulse';
   display.textContent = 'Chargement...';
-  try {
-    const r = await fetch('https://api.frankfurter.app/latest?from=GBP&to=EUR');
-    const data = await r.json();
-    exchangeRate = data.rates.EUR;
-    localStorage.setItem(LS.rate, JSON.stringify({ rate: exchangeRate, ts: Date.now() }));
-    showRate();
-    toast(`Taux live : 1 GBP = ${exchangeRate.toFixed(4)} EUR`, 'success');
-  } catch (e) {
-    if (!exchangeRate) exchangeRate = 1.17;
-    showRate(true);
-    toast('API indisponible — fallback 1.17', 'error');
+
+  // Liste d'APIs à essayer dans l'ordre (toutes gratuites, sans clé, CORS-friendly)
+  const sources = [
+    {
+      name: 'Frankfurter',
+      url: 'https://api.frankfurter.dev/v1/latest?base=GBP&symbols=EUR',
+      parse: d => d.rates?.EUR
+    },
+    {
+      name: 'ExchangeRate.host',
+      url: 'https://api.exchangerate-api.com/v4/latest/GBP',
+      parse: d => d.rates?.EUR
+    },
+    {
+      name: 'Open ER',
+      url: 'https://open.er-api.com/v6/latest/GBP',
+      parse: d => d.rates?.EUR
+    }
+  ];
+
+  for (const src of sources) {
+    try {
+      const r = await fetch(src.url);
+      if (!r.ok) continue;
+      const data = await r.json();
+      const rate = src.parse(data);
+      if (rate && rate > 0) {
+        exchangeRate = rate;
+        localStorage.setItem(LS.rate, JSON.stringify({ rate: exchangeRate, ts: Date.now(), source: src.name }));
+        showRate();
+        toast(`Taux live : 1 GBP = ${exchangeRate.toFixed(4)} EUR (${src.name})`, 'success');
+        return;
+      }
+    } catch (e) {
+      console.warn(`${src.name} failed:`, e);
+    }
   }
+
+  // Toutes les sources ont échoué
+  if (!exchangeRate) exchangeRate = 1.17;
+  showRate(true);
+  toast('Toutes les APIs taux indisponibles — fallback 1,17. Tu peux ajuster la marge.', 'error', 5000);
 }
 
 function showRate(isFallback=false) {
