@@ -311,7 +311,7 @@ header {
 /* ── ORDER ── */
 .table-header {
   display: grid;
-  grid-template-columns: 100px 1fr 90px 130px 40px;
+  grid-template-columns: 100px 1fr 90px 130px 70px 40px;
   gap: 12px;
   padding: 10px 16px;
   font-family: 'DM Mono', monospace;
@@ -322,7 +322,7 @@ header {
 .order-rows { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .order-row {
   display: grid;
-  grid-template-columns: 100px 1fr 90px 130px 40px;
+  grid-template-columns: 100px 1fr 90px 130px 70px 40px;
   gap: 12px;
   align-items: center;
   background: var(--surface2);
@@ -788,6 +788,218 @@ header {
 .modal-field input:focus, .modal-field select:focus { border-color: var(--accent); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
 
+/* ── COMPARISON ZONE (sur les lignes de commande) ── */
+.order-row-wrapper {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  transition: border-color 0.15s;
+  overflow: hidden;
+}
+.order-row-wrapper:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
+.order-row-wrapper.has-comparisons { border-color: color-mix(in srgb, var(--accent2) 40%, var(--border)); }
+.order-row-wrapper .order-row {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+.order-row-wrapper .order-row:hover { border: none; }
+
+.compare-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  border-radius: 3px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.compare-btn:hover { color: var(--accent2); border-color: var(--accent2); }
+.compare-btn.active {
+  background: color-mix(in srgb, var(--accent2) 15%, transparent);
+  border-color: var(--accent2);
+  color: var(--accent2);
+}
+
+.comparison-zone {
+  padding: 14px 20px 16px;
+  border-top: 1px dashed var(--border);
+  background: color-mix(in srgb, var(--accent2) 4%, transparent);
+}
+.comparison-zone-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 10px;
+}
+.comparison-list {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.comparison-item {
+  display: grid;
+  grid-template-columns: 1fr 130px 30px;
+  gap: 10px;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px 12px;
+}
+.comparison-item.retained {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+.comparison-item .ci-sup-name {
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.comparison-item .ci-currency {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  margin-left: 4px;
+}
+.comparison-item .ci-price {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 5px 8px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+}
+.comparison-item .ci-price:focus { border-color: var(--accent); }
+.comparison-item .ci-remove {
+  background: none; border: none;
+  color: var(--muted); cursor: pointer;
+  font-size: 14px; padding: 4px;
+}
+.comparison-item .ci-remove:hover { color: var(--danger); }
+.comparison-item .ci-retain-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 0.1em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  padding: 2px 5px;
+  border-radius: 2px;
+}
+
+.add-comparison-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 6px;
+}
+.add-comparison-row select {
+  flex: 1;
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 3px;
+  padding: 6px 10px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  outline: none;
+  cursor: pointer;
+}
+.add-comparison-row select:focus { border-color: var(--accent); }
+
+/* ── Multi-supplier comparison in RESULTS ── */
+.supplier-multi-compare {
+  padding: 16px 20px;
+  background: var(--surface2);
+  border-top: 1px solid var(--border);
+}
+.smc-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 12px;
+}
+.smc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.smc-option {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px;
+  position: relative;
+}
+.smc-option.best { border-color: var(--accent); }
+.smc-option.retained {
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  border-color: var(--accent);
+}
+.smc-option.best::after {
+  content: '★ MEILLEURE MARGE';
+  position: absolute;
+  top: 8px; right: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px; letter-spacing: 0.1em;
+  color: var(--accent);
+}
+.smc-option.retained::before {
+  content: 'RETENU';
+  position: absolute;
+  top: 8px; left: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px; letter-spacing: 0.1em;
+  background: var(--accent);
+  color: var(--bg);
+  padding: 2px 5px;
+  border-radius: 2px;
+}
+.smc-sup-name {
+  font-weight: 700;
+  font-size: 13px;
+  margin-top: 14px;
+  margin-bottom: 8px;
+}
+.smc-stat {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 2px 0;
+}
+.smc-stat .label { color: var(--muted); }
+.smc-margin {
+  font-family: 'DM Mono', monospace;
+  font-size: 15px;
+  font-weight: 500;
+  margin-top: 6px;
+}
+.smc-retain-btn {
+  width: 100%;
+  margin-top: 10px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  padding: 6px;
+  border-radius: 3px;
+  transition: all 0.15s;
+}
+.smc-retain-btn:hover { color: var(--accent); border-color: var(--accent); }
+.smc-retain-btn.is-retained {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  font-weight: 600;
+  cursor: default;
+}
+
 hr.divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
 .section-gap { margin-top: 32px; }
 
@@ -796,7 +1008,7 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; 
   .steps { grid-template-columns: 1fr; }
   .rate-row { grid-template-columns: 1fr 1fr; }
   .summary-bar { grid-template-columns: 1fr 1fr; }
-  .table-header, .order-row { grid-template-columns: 80px 1fr 70px 100px 30px; gap: 8px; }
+  .table-header, .order-row { grid-template-columns: 80px 1fr 60px 90px 50px 30px; gap: 6px; }
   .supplier-compare { grid-template-columns: 1fr; }
   .supplier-result { border-right: none; border-bottom: 1px solid var(--border); }
   .supplier-result:last-child { border-bottom: none; }
@@ -916,6 +1128,7 @@ hr.divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; 
       <div>Produit</div>
       <div>Qté</div>
       <div>Fournisseur</div>
+      <div>Comparer</div>
       <div></div>
     </div>
 
@@ -1143,6 +1356,7 @@ function loadState() {
       // Normaliser : s'assurer que tous les champs existent
       orderRows.forEach(r => {
         if (!r.competitors) r.competitors = [];
+        if (!r.comparisons) r.comparisons = [];
       });
       rowIdCounter = orderRows.reduce((m, r) => Math.max(m, r.id), 0) + 1;
     }
@@ -1352,7 +1566,7 @@ function addSKUFromSearch(sku) {
   if (emptyRow) {
     emptyRow.sku = sku;
   } else {
-    orderRows.push({ id: rowIdCounter++, sku, qty: 1, supplierId: suppliers[0].id, competitors: [] });
+    orderRows.push({ id: rowIdCounter++, sku, qty: 1, supplierId: suppliers[0].id, competitors: [], comparisons: [] });
   }
   searchInput.value = '';
   searchResults.classList.remove('show');
@@ -1628,28 +1842,39 @@ function renderOrderRows(fullRender=true) {
 }
 
 function buildRow(row) {
-  const div = document.createElement('div');
-  div.className = 'order-row';
-  div.dataset.rowId = row.id;
+  // S'assurer que la structure comparisons existe
+  if (!row.comparisons) row.comparisons = [];
 
-  div.innerHTML = `
+  const wrapper = document.createElement('div');
+  wrapper.className = 'order-row-wrapper';
+  if (row.comparisons.length > 0) wrapper.classList.add('has-comparisons');
+  wrapper.dataset.rowId = row.id;
+
+  const rowDiv = document.createElement('div');
+  rowDiv.className = 'order-row';
+
+  rowDiv.innerHTML = `
     <input type="text" class="sku-input" value="${row.sku}" placeholder="EBM…" style="text-transform:uppercase;">
     <div class="row-product-info"></div>
     <input type="number" class="qty-input" value="${row.qty}" min="1" placeholder="1">
     <select class="supplier-select">
       ${suppliers.map(s => `<option value="${s.id}" ${s.id === row.supplierId ? 'selected' : ''}>${s.name}</option>`).join('')}
     </select>
+    <button class="compare-btn ${row.comparisons.length > 0 ? 'active' : ''}" title="Comparer avec d'autres fournisseurs">
+      ${row.comparisons.length > 0 ? '⇄ ' + (row.comparisons.length + 1) : '+ Comp.'}
+    </button>
     <button class="remove-btn">✕</button>
   `;
 
-  const skuInput = div.querySelector('.sku-input');
-  const qtyInput = div.querySelector('.qty-input');
-  const supSelect = div.querySelector('.supplier-select');
-  const removeBtn = div.querySelector('.remove-btn');
+  const skuInput = rowDiv.querySelector('.sku-input');
+  const qtyInput = rowDiv.querySelector('.qty-input');
+  const supSelect = rowDiv.querySelector('.supplier-select');
+  const compareBtn = rowDiv.querySelector('.compare-btn');
+  const removeBtn = rowDiv.querySelector('.remove-btn');
 
   skuInput.addEventListener('input', e => {
     row.sku = e.target.value.toUpperCase().trim();
-    updateRowStatus(div, row);
+    updateRowStatus(rowDiv, row);
     saveState();
   });
   qtyInput.addEventListener('input', e => {
@@ -1661,14 +1886,180 @@ function buildRow(row) {
     row.supplierId = e.target.value;
     saveState();
   });
+  compareBtn.addEventListener('click', () => {
+    toggleComparisonZone(row, wrapper);
+  });
   removeBtn.addEventListener('click', () => {
     orderRows = orderRows.filter(r => r.id !== row.id);
     renderOrderRows();
     saveState();
   });
 
-  updateRowStatus(div, row);
-  return div;
+  wrapper.appendChild(rowDiv);
+
+  // Si la ligne a déjà des comparaisons → ouvrir la zone par défaut
+  if (row.comparisons.length > 0) {
+    wrapper.appendChild(buildComparisonZone(row, wrapper));
+  }
+
+  updateRowStatus(rowDiv, row);
+  return wrapper;
+}
+
+function toggleComparisonZone(row, wrapper) {
+  const existing = wrapper.querySelector('.comparison-zone');
+  if (existing) {
+    existing.remove();
+    // Si on ferme sans avoir de comparaisons → ok ; sinon on garde les données
+    if (row.comparisons.length === 0) {
+      const btn = wrapper.querySelector('.compare-btn');
+      if (btn) btn.classList.remove('active');
+    }
+  } else {
+    wrapper.appendChild(buildComparisonZone(row, wrapper));
+  }
+}
+
+function buildComparisonZone(row, wrapper) {
+  const zone = document.createElement('div');
+  zone.className = 'comparison-zone';
+  zone.innerHTML = `
+    <div class="comparison-zone-label">Comparaison fournisseurs · même SKU</div>
+    <div class="comparison-list" data-comp-list></div>
+    <div class="add-comparison-row">
+      <select data-add-comp-select>
+        <option value="">+ Ajouter un fournisseur à comparer...</option>
+      </select>
+    </div>
+  `;
+
+  const list = zone.querySelector('[data-comp-list]');
+  const addSelect = zone.querySelector('[data-add-comp-select]');
+
+  function refresh() {
+    // Recréer la liste des comparaisons
+    list.innerHTML = '';
+
+    // Le fournisseur "principal" (row.supplierId) est aussi listé en tête comme retenu actuel
+    const principal = suppliers.find(s => s.id === row.supplierId);
+    if (principal) {
+      list.appendChild(makeComparisonItem(row, {
+        supplierId: principal.id,
+        prixAchat: row[`price_${principal.id}`] || 0
+      }, wrapper, true, refresh));
+    }
+
+    // Puis les autres comparaisons
+    row.comparisons.forEach((cmp, idx) => {
+      list.appendChild(makeComparisonItem(row, cmp, wrapper, false, refresh, idx));
+    });
+
+    // Sélecteur pour ajouter : exclure le principal + ceux déjà comparés
+    const exclude = new Set([row.supplierId, ...row.comparisons.map(c => c.supplierId)]);
+    addSelect.innerHTML = '<option value="">+ Ajouter un fournisseur à comparer...</option>' +
+      suppliers
+        .filter(s => !exclude.has(s.id))
+        .map(s => `<option value="${s.id}">${s.name} (${s.currency})</option>`)
+        .join('');
+
+    // Update du bouton compteur
+    const btn = wrapper.querySelector('.compare-btn');
+    if (btn) {
+      const total = row.comparisons.length + (row.supplierId ? 1 : 0);
+      btn.classList.toggle('active', row.comparisons.length > 0);
+      btn.innerHTML = row.comparisons.length > 0 ? `⇄ ${total}` : '+ Comp.';
+    }
+    wrapper.classList.toggle('has-comparisons', row.comparisons.length > 0);
+  }
+
+  addSelect.addEventListener('change', e => {
+    const supId = e.target.value;
+    if (!supId) return;
+    row.comparisons.push({ supplierId: supId, prixAchat: 0 });
+    saveState();
+    refresh();
+  });
+
+  refresh();
+  return zone;
+}
+
+function makeComparisonItem(row, cmp, wrapper, isPrincipal, refresh, cmpIdx) {
+  const sup = suppliers.find(s => s.id === cmp.supplierId);
+  if (!sup) return document.createElement('div');
+
+  const item = document.createElement('div');
+  item.className = 'comparison-item';
+  if (isPrincipal) item.classList.add('retained');
+
+  const retainLabel = isPrincipal
+    ? '<span class="ci-retain-badge">★ RETENU</span>'
+    : '<button class="smc-retain-btn" style="margin:0;padding:3px 8px;font-size:10px;width:auto;" data-retain>Retenir</button>';
+
+  item.innerHTML = `
+    <div class="ci-sup-name">
+      ${sup.name}
+      <span class="ci-currency">${sup.currency}</span>
+      ${retainLabel}
+    </div>
+    <input type="number" class="ci-price" step="0.01" min="0"
+           placeholder="Prix d'achat ${sup.currency}"
+           value="${cmp.prixAchat || ''}">
+    ${isPrincipal ? '<span style="opacity:0.3; font-size:14px; text-align:center;">—</span>' : '<button class="ci-remove" title="Retirer">✕</button>'}
+  `;
+
+  const priceInput = item.querySelector('.ci-price');
+  priceInput.addEventListener('input', e => {
+    const val = parseFloat(String(e.target.value).replace(',', '.')) || 0;
+    if (isPrincipal) {
+      row[`price_${sup.id}`] = val;
+    } else {
+      row.comparisons[cmpIdx].prixAchat = val;
+    }
+    saveState();
+  });
+
+  if (!isPrincipal) {
+    const removeBtn = item.querySelector('.ci-remove');
+    removeBtn.addEventListener('click', () => {
+      row.comparisons.splice(cmpIdx, 1);
+      saveState();
+      refresh();
+    });
+    const retainBtn = item.querySelector('[data-retain]');
+    retainBtn.addEventListener('click', () => {
+      // Inverser : l'ancien principal devient une comparaison, le nouveau devient principal
+      const oldPrincipalId = row.supplierId;
+      const oldPrincipalPrice = row[`price_${oldPrincipalId}`] || 0;
+
+      // Définir le nouveau principal
+      row.supplierId = sup.id;
+      row[`price_${sup.id}`] = cmp.prixAchat;
+
+      // Retirer le nouveau principal de la liste de comparaisons
+      row.comparisons.splice(cmpIdx, 1);
+
+      // Ajouter l'ancien principal aux comparaisons (s'il avait un prix saisi)
+      if (oldPrincipalId !== sup.id) {
+        row.comparisons.unshift({
+          supplierId: oldPrincipalId,
+          prixAchat: oldPrincipalPrice
+        });
+      }
+
+      // Sync avec le <select> principal en haut
+      const sel = wrapper.querySelector('.supplier-select');
+      if (sel) sel.value = sup.id;
+
+      saveState();
+      refresh();
+      // Si on a déjà des résultats d'analyse, les rafraîchir
+      if (lastAnalysis) runAnalysis();
+      toast(`${sup.name} retenu comme fournisseur principal`, 'success', 1500);
+    });
+  }
+
+  return item;
 }
 
 function updateRowStatus(rowEl, row) {
@@ -1693,7 +2084,7 @@ function updateRowStatus(rowEl, row) {
 }
 
 function addOrderRow() {
-  orderRows.push({ id: rowIdCounter++, sku: '', qty: 1, supplierId: suppliers[0].id, competitors: [] });
+  orderRows.push({ id: rowIdCounter++, sku: '', qty: 1, supplierId: suppliers[0].id, competitors: [], comparisons: [] });
   renderOrderRows();
   saveState();
 }
@@ -1963,6 +2354,120 @@ function attachCompetitorHandlers() {
 // ╔══════════════════════════════════════════════════════════════════════╗
 // ║  ANALYSIS                                                            ║
 // ╚══════════════════════════════════════════════════════════════════════╝
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  MULTI-COMPARE (rendu dans les résultats)                            ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+function renderMultiCompare(a) {
+  if (!a.comparisons || a.comparisons.length === 0) return '';
+
+  // Toutes les options : retenu en premier + comparaisons
+  const allOptions = [
+    { sup: a.sup, prixAchat: a.prixAchat, calc: a.calc, isRetained: true }
+  ].concat(a.comparisons.map(c => ({ ...c, isRetained: false })));
+
+  // Identifier le meilleur (marge la + haute, parmi ceux avec calc valide)
+  let bestMarge = -Infinity, bestIdx = -1;
+  const seuilMin = a.calc ? a.calc.coutUnitaire * 1.4 : 0;
+  allOptions.forEach((opt, i) => {
+    if (opt.calc) {
+      // Marge basée sur le même prix recommandé que le retenu (équitable)
+      const recommended = a.pricing.recommended;
+      const m = (recommended - opt.calc.coutUnitaire) / recommended;
+      opt._marge = m;
+      opt._coutVsRetenu = a.calc ? (opt.calc.coutUnitaire - a.calc.coutUnitaire) : 0;
+      if (opt.calc.coutUnitaire > 0 && (bestIdx === -1 || opt.calc.coutUnitaire < allOptions[bestIdx].calc.coutUnitaire)) {
+        bestIdx = i;
+      }
+    }
+  });
+
+  const cards = allOptions.map((opt, i) => {
+    const isBest = i === bestIdx;
+    const isRetained = opt.isRetained;
+
+    let classes = 'smc-option';
+    if (isBest) classes += ' best';
+    if (isRetained) classes += ' retained';
+
+    let body;
+    if (!opt.calc) {
+      body = `
+        <div class="smc-sup-name">${opt.sup.name}</div>
+        <div style="font-size:11px; color:var(--muted); margin-top:8px;">Prix d'achat non renseigné</div>
+        <div style="font-size:10px; color:var(--muted); margin-top:4px;">Saisis-le dans la zone de comparaison de la ligne</div>
+      `;
+    } else {
+      const margePct = opt._marge * 100;
+      const margeClass = margePct >= 30 ? 'good' : margePct >= 15 ? 'ok' : 'bad';
+      const diff = opt._coutVsRetenu;
+      const diffTxt = isRetained
+        ? ''
+        : (diff === 0
+            ? '<span style="color:var(--muted)">= retenu</span>'
+            : (diff < 0
+                ? `<span style="color:var(--good)">${diff.toFixed(2)} € vs retenu</span>`
+                : `<span style="color:var(--danger)">+${diff.toFixed(2)} € vs retenu</span>`));
+
+      body = `
+        <div class="smc-sup-name">${opt.sup.name}</div>
+        <div class="smc-stat"><span class="label">Prix achat</span><span>${opt.prixAchat.toFixed(2)} ${opt.sup.currency}</span></div>
+        <div class="smc-stat"><span class="label">Revient TTC</span><span>${opt.calc.coutUnitaire.toFixed(2)} €</span></div>
+        <div class="smc-stat"><span class="label">Marge sur prix EBM</span><span style="color:${margePct >= 30 ? 'var(--good)' : margePct >= 15 ? 'var(--warn)' : 'var(--danger)'}">${margePct.toFixed(1)}%</span></div>
+        ${diffTxt ? `<div style="font-family:'DM Mono',monospace; font-size:10px; text-align:right; margin-top:6px;">${diffTxt}</div>` : ''}
+        ${isRetained
+          ? `<button class="smc-retain-btn is-retained" disabled>★ FOURNISSEUR RETENU</button>`
+          : `<button class="smc-retain-btn" data-retain-sup="${opt.sup.id}" data-row-id="${a.row.id}">Retenir ${opt.sup.name}</button>`
+        }
+      `;
+    }
+
+    return `<div class="${classes}">${body}</div>`;
+  }).join('');
+
+  return `
+    <div class="supplier-multi-compare">
+      <div class="smc-label">Comparaison fournisseurs (${allOptions.length} options)</div>
+      <div class="smc-grid">${cards}</div>
+    </div>
+  `;
+}
+
+function attachMultiCompareHandlers() {
+  document.querySelectorAll('[data-retain-sup]').forEach(btn => {
+    btn.onclick = () => {
+      const supId = btn.dataset.retainSup;
+      const rowId = parseInt(btn.dataset.rowId);
+      const row = orderRows.find(r => r.id === rowId);
+      if (!row) return;
+
+      // Trouver le prix de ce fournisseur dans les comparaisons
+      const cmpIdx = row.comparisons.findIndex(c => c.supplierId === supId);
+      if (cmpIdx === -1) return;
+      const newPrice = row.comparisons[cmpIdx].prixAchat;
+
+      // Échanger : l'ancien retenu devient une comparaison
+      const oldRetainedId = row.supplierId;
+      const oldRetainedPrice = row[`price_${oldRetainedId}`] || 0;
+
+      row.supplierId = supId;
+      row[`price_${supId}`] = newPrice;
+      row.comparisons.splice(cmpIdx, 1);
+      if (oldRetainedId !== supId) {
+        row.comparisons.unshift({ supplierId: oldRetainedId, prixAchat: oldRetainedPrice });
+      }
+
+      saveState();
+      renderOrderRows();   // sync la ligne de commande
+      runAnalysis();        // re-analyse
+      const sup = suppliers.find(s => s.id === supId);
+      toast(`${sup.name} retenu comme fournisseur principal`, 'success', 2000);
+    };
+  });
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  ANALYSIS                                                            ║
+// ╚══════════════════════════════════════════════════════════════════════╝
 function runAnalysis() {
   const validRows = orderRows.filter(r => r.sku && catalogue[r.sku]);
   const missingRows = orderRows.filter(r => r.sku && !catalogue[r.sku]);
@@ -1973,7 +2478,8 @@ function runAnalysis() {
   }
   if (validRows.length === 0) { toast('Saisis au moins un SKU valide.', 'error'); return; }
 
-  // Demander les prix d'achat manquants
+  // Demander les prix d'achat manquants (principal uniquement — les comparaisons
+  // sans prix saisi seront affichées avec un message "à compléter")
   const needsPrice = validRows.filter(r => !r[`price_${r.supplierId}`]);
   if (needsPrice.length > 0) {
     const first = needsPrice[0];
@@ -1988,7 +2494,7 @@ function runAnalysis() {
     return;
   }
 
-  // Qté par fournisseur
+  // Qté par fournisseur — basée sur le fournisseur RETENU (row.supplierId) uniquement
   const qtyParSup = {};
   validRows.forEach(r => {
     qtyParSup[r.supplierId] = (qtyParSup[r.supplierId] || 0) + (parseInt(r.qty) || 1);
@@ -2001,41 +2507,52 @@ function runAnalysis() {
   validRows.forEach(row => {
     const info = catalogue[row.sku];
     const qty = parseInt(row.qty) || 1;
-    const sup = suppliers.find(s => s.id === row.supplierId);
-    const prixAchat = row[`price_${sup.id}`];
-    const totalQtySup = qtyParSup[sup.id] || 1;
+    const retainedSup = suppliers.find(s => s.id === row.supplierId);
+    const prixAchat = row[`price_${retainedSup.id}`];
+    const totalQtySup = qtyParSup[retainedSup.id] || 1;
 
-    const calc = calcRevient(sup, prixAchat, totalQtySup);
+    const calc = calcRevient(retainedSup, prixAchat, totalQtySup);
+
+    // Calculer aussi pour les fournisseurs comparés (sans impacter qtyParSup,
+    // puisque la commande finale ira chez le retenu)
+    const comparisons = (row.comparisons || []).map(cmp => {
+      const cmpSup = suppliers.find(s => s.id === cmp.supplierId);
+      if (!cmpSup || !cmp.prixAchat || cmp.prixAchat <= 0) {
+        return { sup: cmpSup, prixAchat: cmp.prixAchat || 0, calc: null };
+      }
+      // Pour les comparaisons, on simule que la qté irait chez ce supplier
+      const calcCmp = calcRevient(cmpSup, cmp.prixAchat, qty);
+      return { sup: cmpSup, prixAchat: cmp.prixAchat, calc: calcCmp };
+    });
+
     if (!calc) {
-      analysisRows.push({ row, info, qty, sup, prixAchat, calc: null });
+      analysisRows.push({ row, info, qty, sup: retainedSup, prixAchat, calc: null, comparisons });
       return;
     }
 
-    // Alerte transport au niveau supplier (une fois)
-    if (calc.alert && !supplierAlerts[sup.id]) {
-      supplierAlerts[sup.id] = calc.alert;
+    if (calc.alert && !supplierAlerts[retainedSup.id]) {
+      supplierAlerts[retainedSup.id] = calc.alert;
     }
 
-    // Prix recommandé tenant compte des concurrents
     const pricing = calcRecommendedPrice(calc.coutUnitaire, row.competitors || []);
     const margeRecommandee = (pricing.recommended - calc.coutUnitaire) / pricing.recommended;
 
-    // Status pricing actuel (EBM)
     const ratioActuel = info.price > 0 ? info.price / calc.coutUnitaire : 0;
     let pricingStatus = 'ok';
     if (ratioActuel < 1.4) pricingStatus = ratioActuel < 1 ? 'loss' : 'low';
 
-    // Totaux fournisseur
-    if (!supplierTotals[sup.id]) {
-      supplierTotals[sup.id] = { name: sup.name, qty: 0, coutTotal: 0, caTotal: 0, items: 0, currency: sup.currency };
+    // Totaux fournisseur : on compte le RETENU
+    if (!supplierTotals[retainedSup.id]) {
+      supplierTotals[retainedSup.id] = { name: retainedSup.name, qty: 0, coutTotal: 0, caTotal: 0, items: 0, currency: retainedSup.currency };
     }
-    supplierTotals[sup.id].qty += qty;
-    supplierTotals[sup.id].coutTotal += calc.coutUnitaire * qty;
-    supplierTotals[sup.id].caTotal += pricing.recommended * qty;
-    supplierTotals[sup.id].items += 1;
+    supplierTotals[retainedSup.id].qty += qty;
+    supplierTotals[retainedSup.id].coutTotal += calc.coutUnitaire * qty;
+    supplierTotals[retainedSup.id].caTotal += pricing.recommended * qty;
+    supplierTotals[retainedSup.id].items += 1;
 
     analysisRows.push({
-      row, info, qty, sup, prixAchat, calc, pricing, margeRecommandee, ratioActuel, pricingStatus
+      row, info, qty, sup: retainedSup, prixAchat, calc, pricing, margeRecommandee, ratioActuel, pricingStatus,
+      comparisons
     });
   });
 
@@ -2180,12 +2697,14 @@ function renderAnalysis({ analysisRows, missingRows, supplierTotals, qtyParSup, 
       </div>
       ${alertHTML}
       <div class="supplier-compare">${calcBlockHTML}</div>
+      ${renderMultiCompare(a)}
       ${renderCompetitors(row, info)}
     `;
     bodyEl.appendChild(card);
   });
 
   attachCompetitorHandlers();
+  attachMultiCompareHandlers();
 
   // Summary bar
   const totalQty = Object.values(supplierTotals).reduce((s, t) => s + t.qty, 0);
