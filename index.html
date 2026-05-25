@@ -1000,6 +1000,47 @@ header {
   cursor: default;
 }
 
+/* ── PRICEBOOK ── */
+.pb-upload-btn, .pb-action-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  padding: 5px 10px;
+  border-radius: 3px;
+  transition: all 0.15s;
+}
+.pb-upload-btn:hover, .pb-action-btn:hover {
+  color: var(--accent2);
+  border-color: var(--accent2);
+}
+.pb-upload-btn input { display: none; }
+
+.price-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 2px;
+  margin-left: 6px;
+  white-space: nowrap;
+}
+.price-badge.fresh {
+  background: color-mix(in srgb, var(--good) 15%, transparent);
+  color: var(--good);
+}
+.price-badge.old {
+  background: color-mix(in srgb, var(--warn) 15%, transparent);
+  color: var(--warn);
+}
+
 hr.divider { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
 .section-gap { margin-top: 32px; }
 
@@ -1210,6 +1251,9 @@ let exchangeRate = null;
 let orderRows = [];
 let rowIdCounter = 0;
 let lastAnalysis = null;
+// priceBook[supplierId][sku] = [{ price, date, notes, refFournisseur }, ...] ordonné par date desc
+let priceBook = {};
+const OLD_PRICE_THRESHOLD_DAYS = 90;
 
 // ── SUPPLIERS — formules officielles document Lynda ────────────────────
 const DEFAULT_SUPPLIERS = [
@@ -1310,7 +1354,8 @@ const LS = {
   rate: 'ebm_rate_v3',
   order: 'ebm_order_v3',
   rateMargin: 'ebm_rate_margin_v3',
-  theme: 'ebm_theme_v3'
+  theme: 'ebm_theme_v3',
+  priceBook: 'ebm_pricebook_v3'
 };
 
 function saveState() {
@@ -1318,6 +1363,7 @@ function saveState() {
     localStorage.setItem(LS.suppliers, JSON.stringify(suppliers));
     localStorage.setItem(LS.order, JSON.stringify(orderRows));
     localStorage.setItem(LS.rateMargin, document.getElementById('rate-margin').value);
+    localStorage.setItem(LS.priceBook, JSON.stringify(priceBook));
   } catch (e) {}
 }
 
@@ -1363,9 +1409,230 @@ function loadState() {
 
     const margin = localStorage.getItem(LS.rateMargin);
     if (margin) document.getElementById('rate-margin').value = margin;
+
+    const pb = localStorage.getItem(LS.priceBook);
+    if (pb) priceBook = JSON.parse(pb);
   } catch (e) {
     suppliers = JSON.parse(JSON.stringify(DEFAULT_SUPPLIERS));
   }
+}
+
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  PRICE BOOK — Base de prix d'achat fournisseurs                      ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+function getKnownPrice(supplierId, sku) {
+  // Retourne le prix le plus récent connu pour ce SKU chez ce fournisseur, ou null
+  if (!priceBook[supplierId] || !priceBook[supplierId][sku]) return null;
+  const entries = priceBook[supplierId][sku];
+  if (entries.length === 0) return null;
+  // Le premier est le plus récent (on les insère trié)
+  return entries[0];
+}
+
+function getPriceAgeDays(entry) {
+  if (!entry || !entry.date) return null;
+  const dateMs = new Date(entry.date).getTime();
+  if (isNaN(dateMs)) return null;
+  return Math.floor((Date.now() - dateMs) / 86400000);
+}
+
+function isPriceOld(entry) {
+  const age = getPriceAgeDays(entry);
+  return age !== null && age > OLD_PRICE_THRESHOLD_DAYS;
+}
+
+function recordPrice(supplierId, sku, price, opts = {}) {
+  if (!sku || !price || price <= 0) return;
+  if (!priceBook[supplierId]) priceBook[supplierId] = {};
+  if (!priceBook[supplierId][sku]) priceBook[supplierId][sku] = [];
+
+  const date = opts.date || new Date().toISOString().slice(0, 10);
+
+  // Éviter doublon exact (même prix + même date)
+  const existingSameDay = priceBook[supplierId][sku].find(e => e.date === date && Math.abs(e.price - price) < 0.001);
+  if (existingSameDay) return;
+
+  priceBook[supplierId][sku].unshift({
+    price: parseFloat(price),
+    date,
+    notes: opts.notes || '',
+    refFournisseur: opts.refFournisseur || '',
+    source: opts.source || 'manuel'  // 'csv' | 'manuel' | 'import'
+  });
+
+  // Trier par date desc (sécurité si on importe des dates passées)
+  priceBook[supplierId][sku].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+  // Limiter à 20 entrées par SKU pour éviter explosion
+  if (priceBook[supplierId][sku].length > 20) {
+    priceBook[supplierId][sku] = priceBook[supplierId][sku].slice(0, 20);
+  }
+  saveState();
+}
+
+function countPricesForSupplier(supplierId) {
+  if (!priceBook[supplierId]) return { skus: 0, entries: 0, lastUpdate: null };
+  const skus = Object.keys(priceBook[supplierId]);
+  let entries = 0;
+  let lastUpdate = null;
+  skus.forEach(sku => {
+    entries += priceBook[supplierId][sku].length;
+    const top = priceBook[supplierId][sku][0];
+    if (top && top.date && (!lastUpdate || top.date > lastUpdate)) lastUpdate = top.date;
+  });
+  return { skus: skus.length, entries, lastUpdate };
+}
+
+function clearPriceBookForSupplier(supplierId) {
+  delete priceBook[supplierId];
+  saveState();
+}
+
+function formatDateFR(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+}
+
+// ── CSV PARSING (robuste : détection délimiteur, colonnes flexibles) ──
+function parseCSV(text) {
+  // Retirer BOM
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+
+  // Détecter délimiteur : ; , \t
+  const firstLine = text.split(/\r?\n/)[0] || '';
+  let delim = ',';
+  const counts = { ',': (firstLine.match(/,/g) || []).length, ';': (firstLine.match(/;/g) || []).length, '\t': (firstLine.match(/\t/g) || []).length };
+  if (counts[';'] > counts[',']) delim = ';';
+  if (counts['\t'] > counts[delim]) delim = '\t';
+
+  const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+  if (lines.length < 2) return { headers: [], rows: [] };
+
+  // Parser une ligne CSV en gérant les guillemets
+  function parseLine(line) {
+    const cells = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (inQ) {
+        if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+        else if (c === '"') inQ = false;
+        else cur += c;
+      } else {
+        if (c === '"') inQ = true;
+        else if (c === delim) { cells.push(cur); cur = ''; }
+        else cur += c;
+      }
+    }
+    cells.push(cur);
+    return cells.map(c => c.trim());
+  }
+
+  const headers = parseLine(lines[0]).map(h => h.toLowerCase());
+  const rows = lines.slice(1).map(line => {
+    const cells = parseLine(line);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = cells[i] !== undefined ? cells[i] : ''; });
+    return obj;
+  });
+  return { headers, rows };
+}
+
+// Détection souple des colonnes
+function detectColumn(headers, candidates) {
+  for (const cand of candidates) {
+    const found = headers.find(h => h === cand || h.includes(cand));
+    if (found) return found;
+  }
+  return null;
+}
+
+function importPriceCSV(supplierId, file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const text = e.target.result;
+      const { headers, rows } = parseCSV(text);
+      if (rows.length === 0) {
+        toast('Fichier CSV vide ou illisible.', 'error');
+        return;
+      }
+
+      // Détecter colonnes
+      const skuCol = detectColumn(headers, ['sku ebm', 'sku', 'ebm', 'référence ebm', 'reference ebm', 'ref ebm']);
+      const priceCol = detectColumn(headers, ['prix achat', 'prix', 'price', 'cost', 'montant']);
+      const dateCol = detectColumn(headers, ['date']);
+      const refCol = detectColumn(headers, ['réf fournisseur', 'ref fournisseur', 'reference fournisseur', 'ref four', 'ref', 'sku fournisseur']);
+      const notesCol = detectColumn(headers, ['notes', 'note', 'commentaire']);
+
+      if (!skuCol) {
+        toast(`Colonne SKU EBM introuvable. Colonnes trouvées : ${headers.join(', ')}`, 'error', 6000);
+        return;
+      }
+      if (!priceCol) {
+        toast(`Colonne prix introuvable. Colonnes trouvées : ${headers.join(', ')}`, 'error', 6000);
+        return;
+      }
+
+      let imported = 0, skipped = 0;
+      rows.forEach(r => {
+        const sku = String(r[skuCol] || '').trim().toUpperCase();
+        const priceStr = String(r[priceCol] || '').replace(',', '.').replace(/[^\d.]/g, '');
+        const price = parseFloat(priceStr);
+        if (!sku || !price || price <= 0) { skipped++; return; }
+
+        let date = dateCol ? String(r[dateCol] || '').trim() : '';
+        // Normaliser date au format ISO YYYY-MM-DD
+        if (date) {
+          // Essayer DD/MM/YYYY → YYYY-MM-DD
+          const m = date.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+          if (m) {
+            let yyyy = m[3].length === 2 ? '20' + m[3] : m[3];
+            date = `${yyyy}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+          }
+        }
+        if (!date) date = new Date().toISOString().slice(0, 10);
+
+        recordPrice(supplierId, sku, price, {
+          date,
+          refFournisseur: refCol ? String(r[refCol] || '').trim() : '',
+          notes: notesCol ? String(r[notesCol] || '').trim() : '',
+          source: 'csv'
+        });
+        imported++;
+      });
+
+      saveState();
+      renderSuppliers();
+      toast(`✓ ${imported} prix importés${skipped > 0 ? ` (${skipped} lignes ignorées)` : ''}`, 'success', 4000);
+    } catch (err) {
+      console.error(err);
+      toast('Erreur lecture CSV : ' + err.message, 'error', 5000);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function exportPriceHistory(supplierId) {
+  const sup = suppliers.find(s => s.id === supplierId);
+  if (!sup || !priceBook[supplierId]) {
+    toast('Aucun historique à exporter.', 'error');
+    return;
+  }
+  let csv = 'SKU EBM,Réf fournisseur,Prix achat,Devise,Date,Source,Notes\n';
+  Object.entries(priceBook[supplierId]).forEach(([sku, entries]) => {
+    entries.forEach(e => {
+      csv += `"${sku}","${e.refFournisseur || ''}",${e.price},${sup.currency},${e.date},${e.source || ''},"${(e.notes || '').replace(/"/g, '""')}"\n`;
+    });
+  });
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `EBM_Prix_${sup.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  toast('Historique exporté.', 'success');
 }
 
 // ╔══════════════════════════════════════════════════════════════════════╗
@@ -1724,6 +1991,26 @@ function renderSuppliers() {
       formulaHint = `(Prix${sup.currency !== 'EUR' ? '×Taux' : ''} + ${sup.params.fraisFixe}) × ${sup.params.tva}`;
     }
 
+    const pbStats = countPricesForSupplier(sup.id);
+    const pbStatusHTML = pbStats.skus > 0
+      ? `<div style="font-family:'DM Mono',monospace; font-size:10px; color:var(--good);">📋 ${pbStats.skus} SKU · ${pbStats.entries} prix${pbStats.lastUpdate ? ' · maj ' + formatDateFR(pbStats.lastUpdate) : ''}</div>`
+      : `<div style="font-family:'DM Mono',monospace; font-size:10px; color:var(--muted);">📋 Aucun prix enregistré</div>`;
+
+    const pricebookHTML = `
+      <div style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--border);">
+        <div style="font-family:'DM Mono',monospace; font-size:9px; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:8px;">Base de prix d'achat</div>
+        ${pbStatusHTML}
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
+          <label class="pb-upload-btn">
+            <input type="file" accept=".csv,.txt" style="display:none;" onchange="handlePriceCSV('${sup.id}', this.files[0]); this.value='';">
+            ⬆ Import CSV
+          </label>
+          ${pbStats.skus > 0 ? `<button class="pb-action-btn" onclick="exportPriceHistory('${sup.id}')">⬇ Export</button>` : ''}
+          ${pbStats.skus > 0 ? `<button class="pb-action-btn" onclick="confirmClearPriceBook('${sup.id}')">🗑 Vider</button>` : ''}
+        </div>
+      </div>
+    `;
+
     card.innerHTML = `
       <div class="supplier-header">
         <div>
@@ -1734,6 +2021,7 @@ function renderSuppliers() {
       </div>
       ${bodyHTML}
       <div class="formula-hint">${formulaHint}</div>
+      ${pricebookHTML}
     `;
     grid.appendChild(card);
   });
@@ -1747,6 +2035,21 @@ function renderSuppliers() {
     <span style="font-size:11px; color:var(--muted);">EUR, GBP, USD...</span>
   `;
   grid.appendChild(add);
+}
+
+function handlePriceCSV(supId, file) {
+  if (!file) return;
+  importPriceCSV(supId, file);
+}
+
+function confirmClearPriceBook(supId) {
+  const sup = suppliers.find(s => s.id === supId);
+  if (!sup) return;
+  const stats = countPricesForSupplier(supId);
+  if (!confirm(`Vider la base de prix de ${sup.name} (${stats.skus} SKU, ${stats.entries} prix) ? Cette action est irréversible.`)) return;
+  clearPriceBookForSupplier(supId);
+  renderSuppliers();
+  toast(`Base de prix ${sup.name} vidée.`, 'info');
 }
 
 function updateSupParam(supId, key, val) {
@@ -1992,6 +2295,32 @@ function makeComparisonItem(row, cmp, wrapper, isPrincipal, refresh, cmpIdx) {
   item.className = 'comparison-item';
   if (isPrincipal) item.classList.add('retained');
 
+  // Pré-remplissage depuis la base de prix si aucune valeur saisie
+  let currentPrice = cmp.prixAchat;
+  let priceBadgeHTML = '';
+  if (!currentPrice && row.sku) {
+    const known = getKnownPrice(sup.id, row.sku);
+    if (known) {
+      currentPrice = known.price;
+      // Synchroniser en mémoire
+      if (isPrincipal) {
+        row[`price_${sup.id}`] = known.price;
+      } else {
+        row.comparisons[cmpIdx].prixAchat = known.price;
+      }
+    }
+  }
+
+  // Badge si on a un prix connu pour ce SKU chez ce fournisseur
+  if (row.sku) {
+    const known = getKnownPrice(sup.id, row.sku);
+    if (known) {
+      const age = getPriceAgeDays(known);
+      const isOld = isPriceOld(known);
+      priceBadgeHTML = `<span class="price-badge ${isOld ? 'old' : 'fresh'}" title="Prix enregistré le ${formatDateFR(known.date)}">${isOld ? '⚠ ' + age + 'j' : '📋 ' + formatDateFR(known.date)}</span>`;
+    }
+  }
+
   const retainLabel = isPrincipal
     ? '<span class="ci-retain-badge">★ RETENU</span>'
     : '<button class="smc-retain-btn" style="margin:0;padding:3px 8px;font-size:10px;width:auto;" data-retain>Retenir</button>';
@@ -2000,11 +2329,12 @@ function makeComparisonItem(row, cmp, wrapper, isPrincipal, refresh, cmpIdx) {
     <div class="ci-sup-name">
       ${sup.name}
       <span class="ci-currency">${sup.currency}</span>
+      ${priceBadgeHTML}
       ${retainLabel}
     </div>
     <input type="number" class="ci-price" step="0.01" min="0"
            placeholder="Prix d'achat ${sup.currency}"
-           value="${cmp.prixAchat || ''}">
+           value="${currentPrice || ''}">
     ${isPrincipal ? '<span style="opacity:0.3; font-size:14px; text-align:center;">—</span>' : '<button class="ci-remove" title="Retirer">✕</button>'}
   `;
 
@@ -2017,6 +2347,16 @@ function makeComparisonItem(row, cmp, wrapper, isPrincipal, refresh, cmpIdx) {
       row.comparisons[cmpIdx].prixAchat = val;
     }
     saveState();
+  });
+  // Au blur, enregistrer dans le pricebook si modifié et différent de la base
+  priceInput.addEventListener('blur', e => {
+    const val = parseFloat(String(e.target.value).replace(',', '.')) || 0;
+    if (val > 0 && row.sku) {
+      const known = getKnownPrice(sup.id, row.sku);
+      if (!known || Math.abs(known.price - val) > 0.001) {
+        recordPrice(sup.id, row.sku, val, { source: 'manuel' });
+      }
+    }
   });
 
   if (!isPrincipal) {
@@ -2478,6 +2818,20 @@ function runAnalysis() {
   }
   if (validRows.length === 0) { toast('Saisis au moins un SKU valide.', 'error'); return; }
 
+  // Pré-remplir les prix d'achat depuis la base de prix (principal + comparaisons)
+  validRows.forEach(r => {
+    if (!r[`price_${r.supplierId}`]) {
+      const known = getKnownPrice(r.supplierId, r.sku);
+      if (known) r[`price_${r.supplierId}`] = known.price;
+    }
+    (r.comparisons || []).forEach(cmp => {
+      if (!cmp.prixAchat) {
+        const known = getKnownPrice(cmp.supplierId, r.sku);
+        if (known) cmp.prixAchat = known.price;
+      }
+    });
+  });
+
   // Demander les prix d'achat manquants (principal uniquement — les comparaisons
   // sans prix saisi seront affichées avec un message "à compléter")
   const needsPrice = validRows.filter(r => !r[`price_${r.supplierId}`]);
@@ -2489,6 +2843,8 @@ function runAnalysis() {
     const price = parseFloat(String(ans).replace(',', '.'));
     if (!price || price <= 0) { toast('Prix invalide.', 'error'); return; }
     first[`price_${first.supplierId}`] = price;
+    // Enregistrer dans le pricebook pour les prochaines fois
+    recordPrice(sup.id, first.sku, price, { source: 'manuel' });
     saveState();
     runAnalysis();
     return;
